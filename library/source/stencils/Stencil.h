@@ -987,6 +987,26 @@ protected:
 
 };
 
+
+class ScaledHelmHoltz: public HelmHoltz{
+
+    const double factor;
+
+public:
+    ScaledHelmHoltz(AdaptiveSparseGrid& grid_, double factor_): HelmHoltz(grid_), factor(factor_){};
+
+
+    inline double localValue(const IndexDimension &center ,const IndexDimension& cell, const MultiDimCompass &mc)const{
+        return factor * HelmHoltz::localValue(center, cell, mc);
+    }
+
+    inline double integration(CellDimension& cell, CellIndexDirection& dirP, CellIndexDirection& dirQ){
+        return factor * HelmHoltz::integration(cell, dirP, dirQ);
+    }
+};
+
+
+
 template <typename F>
 class StencilInterface: public StencilTemplate {
 public:

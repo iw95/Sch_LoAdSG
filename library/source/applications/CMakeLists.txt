@@ -9,7 +9,7 @@ add_library(
 
         cg_method.cpp cg_method.h
 
-
+        power_method.h
 
         norms.cpp   norms.h
 
