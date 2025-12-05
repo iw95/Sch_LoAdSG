@@ -53,7 +53,7 @@ const double CUTCOEFF = 1e25;
     const double real_rhs_factor = 4 * 2*electronmass / (planckconstant * planckconstant) * (border*border*orderemass / (orderplanck*orderplanck));
 
     // ATTENTION: Changing rhs_factor
-    const double rhs_factor = real_rhs_factor * 1e-10;
+    const double rhs_factor = real_rhs_factor; //real_rhs_factor * 1e-10;
 
 
 
@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
         cout << "And Coefficient cutoff = " << CUTCOEFF << endl << endl;
         cout << "Factor on rhs of eq = " << rhs_factor << endl << endl;
 
-        cout << "Level\tDOFs\t\tmult\t\tpower" << endl;
+        cout << "Level\tDOFs\tproblem\t\tmult\t\tpower" << endl;
     }
 
 
@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
         
         Poisson poisson(grid);
 
-        ScaledHelmHoltz rhs(grid, rhs_factor);
+        HelmHoltz rhs(grid);
 
         StencilMC<double (*)(double *)> stencilVarCoeff(grid,&var_coeff,1);
         LocalStiffnessMatricesDynamicDistribution lhs(grid, stencilVarCoeff,numberLSprocesses);
@@ -227,7 +227,7 @@ int main(int argc, char **argv) {
 
 
 
-        double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,ScaledHelmHoltz>(m, lhs, rhs, prew_u, grid);
+        double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(m, lhs, rhs, prew_u, grid);
 
 
 
@@ -240,12 +240,12 @@ int main(int argc, char **argv) {
             VectorSparseG prew_inv(grid);
             prew_inv = 1.0;
 
-        Power::power_inverse<LocalStiffnessMatricesDynamicDistribution, ScaledHelmHoltz>(eps, prew_inv, eigenvalue_power, pow_interations, cg_interations,
+        Power::power_inverse<LocalStiffnessMatricesDynamicDistribution, HelmHoltz>(eps, prew_inv, eigenvalue_power, pow_interations, cg_interations,
             m, lhs, rhs, true, precon, time_power);
 
 
 
-        mpi_cout(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\t\t" + to_string(eigenvalue_mult), false);
+        mpi_cout(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\tvarc\t\t" + to_string(eigenvalue_mult), false);
         mpi_cout("\t" + to_string(eigenvalue_power));
 
 
@@ -257,8 +257,35 @@ int main(int argc, char **argv) {
         prew_inv = prew_inv / product(prew_inv, prew_inv);
         calcNodalByPrew(prew_inv, u);
         u.Print_gnu(path + "power_" + to_string(level) + ".dat");
-        mpi_cout("Printed to " + path);
 
+
+
+
+
+
+        double p_eig_mult = Power::eigenvalue_exp<Poisson,HelmHoltz>(m, poisson, rhs, prew_u, grid);
+        double p_eig_power;
+        Power::power_inverse<Poisson, HelmHoltz>(eps, prew_inv, p_eig_power, pow_interations, cg_interations,
+            m, poisson, rhs, true, precon, time_power);
+
+
+
+        mpi_cout(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\thelmh\t\t" + to_string(p_eig_mult), false);
+        mpi_cout("\t" + to_string(p_eig_power));
+
+
+
+        LocalStiffnessMatricesDynamicDistribution lhs_wo_po(grid, stencilVarCoeff,numberLSprocesses);
+        double ov_eig_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(m, lhs_wo_po, rhs, prew_u, grid);
+        double ov_eig_power;
+        Power::power_inverse<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(eps, prew_inv, p_eig_power, pow_interations, cg_interations,
+            m, lhs_wo_po, rhs, true, precon, time_power);
+
+
+        mpi_cout(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\to/varco\t\t" + to_string(ov_eig_mult), false);
+        mpi_cout("\t" + to_string(ov_eig_power));
+
+        mpi_cout("");
 
     }
 #ifdef MY_MPI_ON
