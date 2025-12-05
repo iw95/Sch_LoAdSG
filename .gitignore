@@ -5,3 +5,19 @@ library/.idea/
 docs/html/
 docs/latex/
 
+
+#
+build/
+.vscode
+
+library/mains/vector*/
+
+
+
+# File library/source/abbrevi.h is, as a config file, not further commited by running
+# 	git update-index --assume-unchanged library/source/abbrevi.h
+# It can be undone by running
+#	git update-index --no-assume-unchanged library/source/abbrevi.h
+# To view files for which change tracking is disabled, run:
+#	git ls-files -v | grep ^[h]
+
