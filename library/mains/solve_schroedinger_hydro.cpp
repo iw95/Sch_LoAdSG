@@ -81,7 +81,7 @@ double var_coeff( double* coordinates)
 {
     double r = 0;
     for (int i = 0; i < DimensionSparseGrid; i++) {
-        double ci = 2 * coordinates[i] - 1;
+        double ci = 2 * coordinates[i] - 1; // < map from [0,1] to [-s,s]
         r += ci * ci;
     }
 
@@ -183,7 +183,9 @@ int main(int argc, char **argv) {
         cout << "And Coefficient cutoff = " << CUTCOEFF << endl << endl;
         //mpi_cout("level\tDOFS\tSummed\t\tPoisson\t\tVarC\t\t\tDiffADD");
 
-        string legend = "level\tDOFS\talph=\t";
+        cout << varc_factor << endl;
+
+        string legend = "level\tDOFS\t\t\tHelmholz\talph=";
         for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 0.1) {
             legend += "\t" + to_string(alpha_local);
         }
@@ -194,7 +196,6 @@ int main(int argc, char **argv) {
 
 
 
-    mpi_cout(to_string(rhs_factor));
 
 
 
