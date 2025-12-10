@@ -21,6 +21,8 @@ double eps = 1e-10;
 
 const double CUTCOEFF = 1e15;
 
+const int mc_samples = 1000;
+
     // https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
     double bohr_radius = 5.29177210544e-11;
     double b_factor = sqrt(M_PI * bohr_radius * bohr_radius * bohr_radius);
@@ -47,7 +49,9 @@ const double CUTCOEFF = 1e15;
                         (planckconstant * planckconstant * M_PI * vacuumpermitivity);
     const double order_factor = (orderemass / orderplanck) * (orderecharge / orderplanck) * (orderecharge / ordereps0);
 
-    const double varc_factor = val_factor * order_factor;
+    const double varc_factor_real = val_factor * order_factor;
+
+    const double varc_factor = varc_factor_real;
 
 
     const double rhs_factor = 4 * 2*electronmass / (planckconstant * planckconstant) * (border*border*orderemass / (orderplanck*orderplanck));
@@ -55,6 +59,9 @@ const double CUTCOEFF = 1e15;
 
 double alpha = 1.;
 
+
+volatile double r_min = 1;
+volatile double r_max = 1;
 
 
 
@@ -76,6 +83,16 @@ void mpi_cout(string s, bool endline = true){
 
 
 
+string r_minmax_res_log() {
+    string str = to_string(r_min) + "\t" + to_string(r_max);
+    r_min = 1;
+    r_max = 1;
+    return str;
+}
+
+
+
+
 
 double var_coeff( double* coordinates)
 {
@@ -90,9 +107,19 @@ double var_coeff( double* coordinates)
         
     double result = CUTCOEFF;
     if (r!=0){
-        result = min(varc_factor / r, CUTCOEFF); // < clipping large values of 1/r around the center
+        result = min(1 / r, CUTCOEFF); // < clipping large values of 1/r around the center
     }
-    
+
+    result = varc_factor / result;
+
+    double over_r = 1/r;
+    if (over_r < r_min) {
+        r_min = over_r;
+    }
+    if (over_r > r_max) r_max = over_r;
+
+    //cout << over_r << "\t";
+
 
 
     return alpha*result;
@@ -180,10 +207,11 @@ int main(int argc, char **argv) {
         cout << "Dimension " << DimensionSparseGrid << endl;
         cout << "Computing on domain [-" << border << ", " << border << "]" << endl;
         cout << "With epsilon = " << eps << endl;
-        cout << "And Coefficient cutoff = " << CUTCOEFF << endl << endl;
+        cout << "And Coefficient cutoff = " << CUTCOEFF << endl;
+        cout << "Monte Carlo samples = " << mc_samples << endl << endl;
         //mpi_cout("level\tDOFS\tSummed\t\tPoisson\t\tVarC\t\t\tDiffADD");
 
-        cout << varc_factor << endl;
+        cout << "Factor k^2 = " << varc_factor << endl << endl;
 
         string legend = "level\tDOFS\t\t\tHelmholz\talph=";
         for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 0.1) {
@@ -205,10 +233,12 @@ int main(int argc, char **argv) {
     IndexDimension centerPoint;
 
 
+    string minmax_str = "level\t\tmin\tmax\n";
+
 
     double Linfty_old = 1.0;
 
-    for (int level = level_start; level <10; level++)
+    for (int level = level_start; level <9; level++)
     {
         // Start measuring time
         struct timeval begin_all, end_all;
@@ -282,10 +312,9 @@ int main(int argc, char **argv) {
             alpha = alpha_local / alphasteps;
 
 
-            // ScaledHelmHoltz rhs(grid, rhs_factor*((exp(30*alpha)-1)/exp(30)) + 1*(1-((exp(30*alpha)-1)/exp(30))));
             ScaledHelmHoltz rhs(grid, 1.0);
 
-            StencilMC<double (*)(double *)> stencilVarCoeff(grid,&var_coeff,1);
+            StencilMC<double (*)(double *)> stencilVarCoeff(grid,&var_coeff,mc_samples);
             LocalStiffnessMatricesDynamicDistribution lhs(grid, stencilVarCoeff,numberLSprocesses);
             lhs.addStencil(poisson);
 
@@ -325,8 +354,17 @@ int main(int argc, char **argv) {
         mpi_cout("");
 
 
+        minmax_str += to_string(level) + "\t\t" + r_minmax_res_log() + "\n";
+
 
     }
+
+    #ifdef MY_MPI_ON
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if (rank==1)
+            cout << minmax_str;
+    #endif
+
 #ifdef MY_MPI_ON
     MPI_Finalize();
 #endif
