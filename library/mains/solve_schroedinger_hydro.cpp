@@ -36,8 +36,8 @@ const int mc_samples = 1000;
     const double elementarycharge = 1.602176634;
     const double orderecharge = 1e-19;
 
-    // https://physics.nist.gov/cgi-bin/cuu/Value?h
-    const double planckconstant = 6.62607015;
+    // https://physics.nist.gov/cgi-bin/cuu/Value?hbar
+    const double redplanckconstant = 1.054571817;
     const double orderplanck = 1e-34;
 
     // https://physics.nist.gov/cgi-bin/cuu/Value?ep0
@@ -46,7 +46,7 @@ const int mc_samples = 1000;
 
 
     const double val_factor = -2 * border * electronmass * elementarycharge * elementarycharge / 
-                        (planckconstant * planckconstant * M_PI * vacuumpermitivity);
+                        (redplanckconstant * redplanckconstant * M_PI * vacuumpermitivity);
     const double order_factor = (orderemass / orderplanck) * (orderecharge / orderplanck) * (orderecharge / ordereps0);
 
     const double varc_factor_real = val_factor * order_factor;
@@ -54,7 +54,7 @@ const int mc_samples = 1000;
     const double varc_factor = varc_factor_real;
 
 
-    const double rhs_factor = 4 * 2*electronmass / (planckconstant * planckconstant) * (border*border*orderemass / (orderplanck*orderplanck));
+    const double rhs_factor = 4 * 2*electronmass / (redplanckconstant * redplanckconstant) * (border*border*orderemass / (orderplanck*orderplanck));
 
 
 double alpha = 1.;
