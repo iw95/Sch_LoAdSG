@@ -17,11 +17,11 @@ double border = 8e-12;
 //3e-9;
 //8e-10;
 
-double eps = 1e-10;
+double eps = 1e-35;
 
-const double CUTCOEFF = 1e15;
+const double CUTCOEFF = 1e10;
 
-const int mc_samples = 1000;
+const int mc_samples = 100;
 
     // https://physics.nist.gov/cgi-bin/cuu/Value?bohrrada0
     double bohr_radius = 5.29177210544e-11;
@@ -45,7 +45,7 @@ const int mc_samples = 1000;
     const double ordereps0 = 1e-12;
 
 
-    const double val_factor = -2 * border * electronmass * elementarycharge * elementarycharge / 
+    const double val_factor = -2. * border * electronmass * elementarycharge * elementarycharge / 
                         (redplanckconstant * redplanckconstant * M_PI * vacuumpermitivity);
     const double order_factor = (orderemass / orderplanck) * (orderecharge / orderplanck) * (orderecharge / ordereps0);
 
@@ -54,7 +54,7 @@ const int mc_samples = 1000;
     const double varc_factor = varc_factor_real;
 
 
-    const double rhs_factor = 4 * 2*electronmass / (redplanckconstant * redplanckconstant) * (border*border*orderemass / (orderplanck*orderplanck));
+    const double rhs_factor = (8. *electronmass / (redplanckconstant * redplanckconstant)) * (border*border*orderemass / (orderplanck*orderplanck));
 
 
 double alpha = 1.;
@@ -98,7 +98,7 @@ double var_coeff( double* coordinates)
 {
     double r = 0;
     for (int i = 0; i < DimensionSparseGrid; i++) {
-        double ci = 2 * coordinates[i] - 1; // < map from [0,1] to [-s,s]
+        double ci = 2. * coordinates[i] - 1.; // < map from [0,1] to [-s,s]
         r += ci * ci;
     }
 
@@ -107,12 +107,12 @@ double var_coeff( double* coordinates)
         
     double result = CUTCOEFF;
     if (r!=0){
-        result = min(1 / r, CUTCOEFF); // < clipping large values of 1/r around the center
+        result = min(1. / r, CUTCOEFF); // < clipping large values of 1/r around the center
     }
 
     result = varc_factor * result;
 
-    double over_r = 1/r;
+    double over_r = 1./r;
     if (over_r < r_min) {
         r_min = over_r;
     }
@@ -129,20 +129,20 @@ double var_coeff( double* coordinates)
 
 
 inline double unitSQ2atom(double coordinate) {
-    return (2 * coordinate - 1) * border;
+    return (2. * coordinate - 1.) * border;
 }
 
 
 double known_eigenfunction(IndexDimension I) {
     // Calculate distance from zero r
-    double r = 0;
+    double r = 0.;
     for(int d=0; d<DimensionSparseGrid; d++){
         const double atom_coord = unitSQ2atom(I.coordinate(d));
         r += atom_coord * atom_coord;
     }
     r = sqrt(r);
 
-    double val = exp(- 1 * r / bohr_radius) / b_factor;
+    double val = exp(- 1. * r / bohr_radius) / b_factor;
 
 
     return val;
@@ -150,7 +150,7 @@ double known_eigenfunction(IndexDimension I) {
 
 
 double laplace_sin(IndexDimension I) {
-    double val = 1;
+    double val = 1.;
     for (int d=0; d<DimensionSparseGrid; d++) {
         val *= sin(M_PI * I.coordinate(d));
     }
@@ -217,6 +217,7 @@ int main(int argc, char **argv) {
         for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 0.1) {
             legend += "\t" + to_string(alpha_local);
         }
+        legend += "\t\tcg_iter";
         cout << legend << endl << endl;
         //cout <<"level\tDOFS\tByMult\t\tPower" << endl;
     }
@@ -312,7 +313,7 @@ int main(int argc, char **argv) {
             alpha = alpha_local / alphasteps;
 
 
-            ScaledHelmHoltz rhs(grid, 1.0);
+            HelmHoltz rhs(grid);
 
             StencilMC<double (*)(double *)> stencilVarCoeff(grid,&var_coeff,mc_samples);
             LocalStiffnessMatricesDynamicDistribution lhs(grid, stencilVarCoeff,numberLSprocesses);
@@ -320,7 +321,7 @@ int main(int argc, char **argv) {
 
 
 
-            double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,ScaledHelmHoltz>(m, lhs, rhs, prew_u, grid);
+            double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(m, lhs, rhs, prew_u, grid);
 
 
 
@@ -333,12 +334,16 @@ int main(int argc, char **argv) {
             VectorSparseG prew_inv(grid);
             prew_inv = 1.0;
 
-            Power::power_inverse<LocalStiffnessMatricesDynamicDistribution, ScaledHelmHoltz>(eps, prew_inv, eigenvalue_power, pow_interations, cg_interations,
+            Power::power_inverse<LocalStiffnessMatricesDynamicDistribution, HelmHoltz>(eps, prew_inv, eigenvalue_power, pow_interations, cg_interations,
                 m, lhs, rhs, true, precon, time_power);
 
 
             mults_str += "\t" + to_string(eigenvalue_mult);
             powers_str += "\t" + to_string(eigenvalue_power);
+
+            if (alpha_local == alphasteps) {
+                powers_str += "\t\t" + to_string(cg_interations);
+            }
         
         }
 
