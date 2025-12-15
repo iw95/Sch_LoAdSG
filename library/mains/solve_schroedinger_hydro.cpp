@@ -110,7 +110,7 @@ double var_coeff( double* coordinates)
         result = min(1 / r, CUTCOEFF); // < clipping large values of 1/r around the center
     }
 
-    result = varc_factor / result;
+    result = varc_factor * result;
 
     double over_r = 1/r;
     if (over_r < r_min) {
