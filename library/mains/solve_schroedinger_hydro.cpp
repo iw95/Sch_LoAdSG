@@ -17,7 +17,7 @@ double border = 8e-12;
 //3e-9;
 //8e-10;
 
-double eps = 1e-35;
+double eps = 1e-45;
 
 const double CUTCOEFF = 1e10;
 
@@ -54,7 +54,10 @@ const int mc_samples = 100;
     const double varc_factor = varc_factor_real;
 
 
-    const double rhs_factor = (8. *electronmass / (redplanckconstant * redplanckconstant)) * (border*border*orderemass / (orderplanck*orderplanck));
+    const double rhs_factor = (8. *electronmass / (redplanckconstant * redplanckconstant)) * (border*border*orderemass / (orderplanck*orderplanck)) *1e-18;
+
+    const double eig_exp = -2.180; // *1e-18 
+    const double trick_eig_exp = eig_exp - eig_exp*1.9;
 
 
 double alpha = 1.;
@@ -111,6 +114,8 @@ double var_coeff( double* coordinates)
     }
 
     result = varc_factor * result;
+    result -= rhs_factor*eig_exp*1.9;
+
 
     double over_r = 1./r;
     if (over_r < r_min) {
@@ -211,13 +216,15 @@ int main(int argc, char **argv) {
         cout << "Monte Carlo samples = " << mc_samples << endl << endl;
         //mpi_cout("level\tDOFS\tSummed\t\tPoisson\t\tVarC\t\t\tDiffADD");
 
-        cout << "Factor k^2 = " << varc_factor << endl << endl;
+        cout << "Factor k^2 = " << varc_factor << endl;
+        cout << "Factor rhs = " << rhs_factor << endl;
+        cout << "Eig expected (trick) = " << trick_eig_exp << endl << endl;
 
         string legend = "level\tDOFS\t\t\tHelmholz\talph=";
         for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 0.1) {
             legend += "\t" + to_string(alpha_local);
         }
-        legend += "\t\tcg_iter";
+        legend += "\t\tcg_iter\tpow_iter";
         cout << legend << endl << endl;
         //cout <<"level\tDOFS\tByMult\t\tPower" << endl;
     }
@@ -321,7 +328,7 @@ int main(int argc, char **argv) {
 
 
 
-            double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(m, lhs, rhs, prew_u, grid);
+            // double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(m, lhs, rhs, prew_u, grid);
 
 
 
@@ -337,12 +344,14 @@ int main(int argc, char **argv) {
             Power::power_inverse<LocalStiffnessMatricesDynamicDistribution, HelmHoltz>(eps, prew_inv, eigenvalue_power, pow_interations, cg_interations,
                 m, lhs, rhs, true, precon, time_power);
 
+            double eigenvalue_mult = Power::eigenvalue_exp<LocalStiffnessMatricesDynamicDistribution,HelmHoltz>(m, lhs, rhs, prew_inv, grid);
+
 
             mults_str += "\t" + to_string(eigenvalue_mult);
-            powers_str += "\t" + to_string(eigenvalue_power);
+            powers_str += "\t" + to_string(eigenvalue_power/rhs_factor);
 
             if (alpha_local == alphasteps) {
-                powers_str += "\t\t" + to_string(cg_interations);
+                powers_str += "\t\t" + to_string(cg_interations) + "\t" + to_string(pow_interations);
             }
         
         }

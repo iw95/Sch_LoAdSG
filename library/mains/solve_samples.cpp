@@ -19,7 +19,7 @@ int numberMVprocesses=1;
 int numberLSprocesses;
 
 
-const int num_samples = 6;
+const int num_samples = 9;
 
 
 void mpi_cout(string s, bool endline = true){
@@ -49,17 +49,29 @@ double var_coeff1(double* coordinates)
 }
 
 
+double factor2 = 80.;
+double var_coeff2(double* coordinates)
+{
+    double result = 0;
+    result += (coordinates[0]-0.5)*(coordinates[0]-0.5);
+    result += (coordinates[1]-0.5)*(coordinates[1]-0.5);
+    result *= factor2*factor2*4;;
+    return result;
+}
+
+
+double factor3 = 40.;
 double var_coeff3(double* coordinates)
 {
     double result = 0;
     result += (coordinates[0]-0.5)*(coordinates[0]-0.5);
     result += (coordinates[1]-0.5)*(coordinates[1]-0.5);
-    result *= 6400;
+    result *= factor3*factor3*4;
     return result;
 }
 
 
-double border4 = 3.;
+double border4 = 5.;
 double var_coeff4(double* coordinates)
 {
     double result = 0;
@@ -70,7 +82,7 @@ double var_coeff4(double* coordinates)
 }
 
 
-double border5 = 20.;
+double border5 = 5.;
 double var_coeff5(double* coordinates)
 {
     double result = 0;
@@ -85,17 +97,44 @@ double var_coeff5(double* coordinates)
 
 double var_coeff6(double* coordinates)
 {
-    return -1 * var_coeff5(coordinates);
+    double result = var_coeff5(coordinates);
+    result += 4*border5*border5*1.9*1;
+    return result;
 }
+
+
+double border7 = 20;
+double var_coeff7(double* coordinates)
+{
+    double result = 0;
+    result += (2*coordinates[0] - 1) * (2*coordinates[0] - 1);
+    result += (2*coordinates[1] - 1) * (2*coordinates[1] - 1);
+    if (result > 1e6) result = 1e6;
+    result = 1/sqrt(result);
+    result *= -4*border7;
+    return result;
+}
+
+
+double var_coeff8(double* coordinates)
+{
+    double result = var_coeff7(coordinates);
+    result += 4*border7*border7*1.9*1;
+    return result;
+}
+
 
 
 double expected_eig[] = {
                         2*M_PI*M_PI+1,
                         M_PI*M_PI+80,
-                        160,
+                        factor2*4,
+                        factor3*4,
                         16*border4*border4,
                         -4*border5*border5,
-                        -4*border5*border5
+                        (-1+1*1.9)*4*border5*border5,
+                        -4*border7*border7,
+                        (-1+1*1.9)*4*border7*border7
                         };
 
 
@@ -216,10 +255,13 @@ int main(int argc, char **argv) {
    
         powers_str += "\t" + execute_sample<&var_coeff0>(grid, m);
         powers_str += "\t" + execute_sample<&var_coeff1>(grid, m);
+        powers_str += "\t" + execute_sample<&var_coeff2>(grid, m);
         powers_str += "\t" + execute_sample<&var_coeff3>(grid, m);
         powers_str += "\t" + execute_sample<&var_coeff4>(grid, m);
         powers_str += "\t" + execute_sample<&var_coeff5>(grid, m);
         powers_str += "\t" + execute_sample<&var_coeff6>(grid, m);
+        powers_str += "\t" + execute_sample<&var_coeff7>(grid, m);
+        powers_str += "\t" + execute_sample<&var_coeff8>(grid, m);
 
 
         // mpi_cout(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\t", false);

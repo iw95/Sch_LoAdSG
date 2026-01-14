@@ -32,6 +32,8 @@ const int mc_samples = 100;
 
     const double rhs_factor = 4*border*border;
 
+    const double eig_exp = -1.*rhs_factor;
+
 
 double alpha = 1.;
 
@@ -87,6 +89,8 @@ double var_coeff( double* coordinates)
     }
 
     result = varc_factor * result;
+    result -= 1.9*eig_exp; // + 1.9*1*4*s^2 (eig_exp==1)
+
 
     double over_r = 1./r;
     if (over_r < r_min) {
@@ -153,7 +157,7 @@ int main(int argc, char **argv) {
 
 
     mpi_cout(" Dimension " + to_string( DimensionSparseGrid));
-    mpi_cout("regular grid, solve: -lap u + c*u = f ");
+    mpi_cout("regular grid, solve: -lap u + (c-1.9lambda)*u =  -0.9lamda");
 
 
     #pragma omp parallel
@@ -314,7 +318,7 @@ int main(int argc, char **argv) {
                 m, lhs, rhs, true, precon, time_power);
 
 
-            mults_str += "\t" + to_string(eigenvalue_mult);
+            mults_str += "\t" + to_string(eigenvalue_mult/rhs_factor);
             powers_str += "\t" + to_string(eigenvalue_power/rhs_factor);
 
             if (alpha_local == alphasteps) {
