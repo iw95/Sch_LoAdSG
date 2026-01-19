@@ -25,7 +25,7 @@ public:
     static bool power_inverse(double eps, VectorSparseG &x,
                             double &eigenvalue, int &iterations,
                             double &avg_cg_iterations, MatrixVectorHomogen& matrix,
-                            Stencil_left lhs, Stencil_right rhs,
+                            Stencil_left& lhs, Stencil_right& rhs,
                             bool rightoperator, double &precondition, double &duration);
 
     template<class Stencil_left, class Stencil_right>
@@ -175,7 +175,7 @@ Power::power_max(double eps, VectorSparseG &x, double &eigenvalue, int &iteratio
 template<class Stencil_left, class Stencil_right>
 bool
 Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iterations, double &avg_cg_iterations,
-                 MatrixVectorHomogen& matrix, Stencil_left lhs, Stencil_right rhs, bool rightoperator, double &precondition, double &duration) {
+                 MatrixVectorHomogen& matrix, Stencil_left& lhs, Stencil_right& rhs, bool rightoperator, double &precondition, double &duration) {
 
 
 
