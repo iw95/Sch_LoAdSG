@@ -11,6 +11,7 @@
 #include "../MatrixVectorMultiplication/MatrixVectorHomogen.h"
 #include "../MatrixVectorMultiplication/MatrixVectorInhomogen.h"
 #include "cg_method.h"
+#include "minres.h"
 
 class Power {
 public:
@@ -226,7 +227,7 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
             y = xalt;
         }
         // solve (y = A * x_neu) for xneu
-        CG::solveHomogen<Stencil_left>(cg_eps, xneu, y, &cg_iterations, xalt, matrix, lhs, &cg_time);
+        MinRes::solveHomogen<Stencil_left>(cg_eps, xneu, y, &cg_iterations, xalt, matrix, lhs, &cg_time);
 
 
         norm_x = sqrt(product(xneu, xneu));
