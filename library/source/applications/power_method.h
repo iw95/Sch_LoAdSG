@@ -227,7 +227,7 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
             y = xalt;
         }
         // solve (y = A * x_neu) for xneu
-        MinRes::solveHomogen<Stencil_left>(cg_eps, xneu, y, &cg_iterations, xalt, matrix, lhs, &cg_time);
+        CG::solveHomogen<Stencil_left>(cg_eps, xneu, y, &cg_iterations, xalt, matrix, lhs, &cg_time);
 
 
         norm_x = sqrt(product(xneu, xneu));
