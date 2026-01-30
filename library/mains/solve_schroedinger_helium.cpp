@@ -31,12 +31,13 @@ int num_electrons = 2;
     double b_factor = sqrt(M_PI);
 
     // TODO check varc factor
-    const double varc_factor = -8*border;
+    const double varc_factor = 4*border;
 
     const double rhs_factor = 4*border*border;
 
     // modular for num_electrons
-    const double eig_exp = -1.*rhs_factor;
+    const double eig_exp = -2.90338583;
+    const double transf_eig_exp = eig_exp*rhs_factor;
 
 
 double alpha = 1.;
@@ -75,10 +76,9 @@ double electron_core(double* coordinates, size_t electron_idx) {
         result = min(1./r, CUTCOEFF);
     }
 
-    return result;
+    return -2 * result;
     // Still to happen in : varc_factor for coordinate transformation
     // trick for positive definiteness
-    // electron charge?
 }
 
 
@@ -90,17 +90,16 @@ double electron_electron(double* coordinates, size_t e_idx0, size_t e_idx1) {
         double ci = coordinates[offset0 + i] - coordinates[offset1 +  i];
         r += ci*ci;
     }
-    r = 2*sqrt(r);
+    r = sqrt(r);
 
     double result = CUTCOEFF;
     if (r != 0) {
         result = min(1./r, CUTCOEFF);
     }
 
-    return result;
+    return 0.5*result;
     // Still to happen: varc_factor for coordinate transformation
     // trick for positive definiteness
-    // core and electron charge?
 }
 
 
@@ -110,7 +109,7 @@ double var_coeff( double* coordinates)
 
     for (int e = 0; e < num_electrons; e++) {
         // Electron - core interaction term
-        result -= electron_core(coordinates, e);
+        result += electron_core(coordinates, e);
 
         for (int e2 = 0; e2 < e; e2++) {
             // Electron - electron interaction term
@@ -123,7 +122,7 @@ double var_coeff( double* coordinates)
 
     // Trick to make positive definite
     if (trick) {
-        result -= 1.9 * eig_exp;
+        result -= 1.9 * transf_eig_exp;
     }
 
     return result * alpha;
@@ -161,7 +160,7 @@ int main(int argc, char **argv) {
         }
 
 
-    int numberMVprocesses=1;
+    int numberMVprocesses= int(num_tasks/2);
     int numberLSprocesses=num_tasks - numberMVprocesses;
 
     mpi_cout("use " + to_string(numberLSprocesses)+ " for LocalStiffnessmatrices ");
@@ -172,15 +171,15 @@ int main(int argc, char **argv) {
 
 
     if (rank == 0) {
+        cout << endl;
         cout << "Computing the first eigenvalue of the Schroedinger equation for the HELIUM atom, i.e. with (originally) two electrons." << endl;
-        cout << "The expected eigenvalue is " << "?" << endl; // TODO
+        cout << "The expected eigenvalue is " << eig_exp << endl;
         cout << "Computing for " << num_electrons << " electrons." << endl << endl;
         cout << "Computing on domain [-" << border << ", " << border << "]" << endl;
+        cout << (trick ? "U" : "NOT u") << "sing the shift trick for positive eigenvalue." << endl;
         cout << "With epsilon = " << eps << endl;
         cout << "And Coefficient cutoff = " << CUTCOEFF << endl;
         cout << "Monte Carlo samples = " << mc_samples << endl << endl;
-
-        //cout << "Factor k^2 = " << varc_factor << endl << endl;
 
         string legend = "level\tDOFS\t\talph=";
         for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 0.1) {
@@ -204,7 +203,7 @@ int main(int argc, char **argv) {
 
     double Linfty_old = 1.0;
 
-    for (int level = level_start; level <9; level++)
+    for (int level = level_start; level <10; level++)
     {
         // Start measuring time
         struct timeval begin_all, end_all;
@@ -222,7 +221,7 @@ int main(int argc, char **argv) {
 
         string powers_str = "";
         
-        double alphasteps = 10;
+        double alphasteps = 5;
         for (int alpha_local = 0; alpha_local <= alphasteps; alpha_local += 1) {
 
             alpha = alpha_local / alphasteps;
@@ -250,7 +249,7 @@ int main(int argc, char **argv) {
                 m, lhs, rhs, true, precon, time_power);
 
 
-            powers_str += "\t" + to_string(eigenvalue_power/rhs_factor);
+            powers_str += "\t" + to_string(eigenvalue_power/(rhs_factor*0.9));
 
             if (alpha_local == alphasteps) {
                 powers_str += "\t\t" + to_string(cg_interations);
