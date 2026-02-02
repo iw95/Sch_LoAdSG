@@ -14,8 +14,6 @@
 #include <fstream>
 
 
-// OUTPUT FILE
-ofstream file_out;
 
 double border = 7.5;
 //3e-9;
@@ -35,7 +33,9 @@ int num_electrons = 2;
     double b_factor = sqrt(M_PI);
 
     // TODO check varc factor
-    const double varc_factor = 4*border;
+    // 2: for factor 1/2 in atomic units
+    // 4*border: for coordinate transform factor
+    const double varc_factor = 2*4*border;
 
     const double rhs_factor = 4*border*border;
 
@@ -50,17 +50,17 @@ double alphasteps = 5;
 bool trick = true;
 
 
-void mpi_file_out(string s, bool endline = true){
+void mpi_cout(string s, bool endline = true){
     int rank = 0;
 #ifdef MY_MPI_ON
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if(rank ==0){
-        file_out << s;
-        if (endline) file_out << endl;
+        cout << s;
+        if (endline) cout << endl;
     }
 #else
-        file_out << s;
-        if (endline) file_out << endl;
+        cout << s;
+        if (endline) cout << endl;
 #endif
 }
 
@@ -138,7 +138,8 @@ double var_coeff( double* coordinates)
 
 int main(int argc, char **argv) {
     // writing output to a file
-    file_out.open("output.txt");
+    freopen ("output.txt","w",stdout);
+    freopen ("stderr.txt","w",stderr);
 
     int rank = 0;
     int num_tasks = 1;
@@ -152,8 +153,8 @@ int main(int argc, char **argv) {
 
 
 
-    mpi_file_out(" Dimension " + to_string( DimensionSparseGrid));
-    mpi_file_out("Regular grid.");
+    mpi_cout(" Dimension " + to_string( DimensionSparseGrid));
+    mpi_cout("Regular grid.");
 
 
     #pragma omp parallel
@@ -161,8 +162,8 @@ int main(int argc, char **argv) {
     #pragma omp single
             {
                 int total_threads = omp_get_num_threads();
-                mpi_file_out("number of mpi_tasks " + to_string(num_tasks));
-                mpi_file_out("number of omp_threads " + to_string(total_threads));
+                mpi_cout("number of mpi_tasks " + to_string(num_tasks));
+                mpi_cout("number of omp_threads " + to_string(total_threads));
             }
         }
 
@@ -170,30 +171,30 @@ int main(int argc, char **argv) {
     int numberMVprocesses= int(num_tasks/2);
     int numberLSprocesses=num_tasks - numberMVprocesses;
 
-    mpi_file_out("use " + to_string(numberLSprocesses)+ " for LocalStiffnessmatrices ");
-    mpi_file_out("use " + to_string(num_tasks - numberLSprocesses)+ " for Matrix Vector Multiplication ");
+    mpi_cout("use " + to_string(numberLSprocesses)+ " for LocalStiffnessmatrices ");
+    mpi_cout("use " + to_string(num_tasks - numberLSprocesses)+ " for Matrix Vector Multiplication ");
 
 
 
 
 
     if (rank == 0) {
-        file_out << endl;
-        file_out << "Computing the first eigenvalue of the Schroedinger equation for the HELIUM atom, i.e. with (originally) two electrons." << endl;
-        file_out << "The expected eigenvalue is " << eig_exp << endl;
-        file_out << "Computing for " << num_electrons << " electrons." << endl << endl;
-        file_out << "Computing on domain [-" << border << ", " << border << "]" << endl;
-        file_out << (trick ? "U" : "NOT u") << "sing the shift trick for positive eigenvalue." << endl;
-        file_out << "With epsilon = " << eps << endl;
-        file_out << "And Coefficient cutoff = " << CUTCOEFF << endl;
-        file_out << "Monte Carlo samples = " << mc_samples << endl << endl;
+        cout << endl;
+        cout << "Computing the first eigenvalue of the Schroedinger equation for the HELIUM atom, i.e. with (originally) two electrons." << endl;
+        cout << "The expected eigenvalue is " << eig_exp << endl;
+        cout << "Computing for " << num_electrons << " electrons." << endl << endl;
+        cout << "Computing on domain [-" << border << ", " << border << "]" << endl;
+        cout << (trick ? "U" : "NOT u") << "sing the shift trick for positive eigenvalue." << endl;
+        cout << "With epsilon = " << eps << endl;
+        cout << "And Coefficient cutoff = " << CUTCOEFF << endl;
+        cout << "Monte Carlo samples = " << mc_samples << endl << endl;
 
         string legend = "level\tDOFS\t\talph=";
         for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 1/alphasteps) {
             legend += "\t" + to_string(alpha_local);
         }
-        legend += "\t\tcg_iter";
-        file_out << legend << endl << endl;
+        legend += "\t\tcg_iter\t\tpow_iter";
+        cout << legend << endl << endl;
     }
 
 
@@ -259,15 +260,16 @@ int main(int argc, char **argv) {
 
             if (alpha_local == alphasteps) {
                 powers_str += "\t\t" + to_string(cg_interations);
+                powers_str += "\t\t" + to_string(pow_interations);
             }
         
         }
 
-        mpi_file_out(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\t", false);
-        mpi_file_out("power\t", false);
-        mpi_file_out(powers_str);
+        mpi_cout(to_string(level) + "\t" + to_string(grid.getDOFS()) + "\t", false);
+        mpi_cout("power\t", false);
+        mpi_cout(powers_str);
 
-        mpi_file_out("");
+        mpi_cout("");
 
     }
 
@@ -275,7 +277,6 @@ int main(int argc, char **argv) {
     MPI_Finalize();
 #endif
 
-    file_out.close();
     return 0;
 
 
