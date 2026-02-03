@@ -192,11 +192,11 @@ int main(int argc, char **argv) {
         }
 
 
-    int numberMVprocesses= int(num_tasks/2);
-    int numberLSprocesses=num_tasks - numberMVprocesses;
+    int numberMVprocesses=32;
+    int numberLSprocesses= num_tasks - numberMVprocesses;
 
     mpi_cout("use " + to_string(numberLSprocesses)+ " for LocalStiffnessmatrices ");
-    mpi_cout("use " + to_string(num_tasks - numberLSprocesses)+ " for Matrix Vector Multiplication ");
+    mpi_cout("use " + to_string(numberMVprocesses)+ " for Matrix Vector Multiplication ");
 
 
 
