@@ -81,7 +81,7 @@ void mpi_cout(string s, bool endline = true){
 /// @return value at coordinates
 double electron_core(double* coordinates, size_t electron_idx) {
     double r = 0;
-    for (int i = DimensionSparseGrid*electron_idx; i < DimensionSparseGrid*(electron_idx+1); i++) {
+    for (int i = singleDimension*electron_idx; i < singleDimension*(electron_idx+1); i++) {
         double ci = 2. *  coordinates[i] - 1; // < map from [0,1] to [-s,s]
         r += ci * ci;
     }
@@ -105,9 +105,9 @@ double electron_core(double* coordinates, size_t electron_idx) {
 /// @return value at coordinates
 double electron_electron(double* coordinates, size_t e_idx0, size_t e_idx1) {
     double r = 0;
-    int offset0 = DimensionSparseGrid*e_idx0;
-    int offset1 = DimensionSparseGrid*e_idx1;
-    for(int i = 0; i < DimensionSparseGrid; i++) {
+    int offset0 = singleDimension*e_idx0;
+    int offset1 = singleDimension*e_idx1;
+    for(int i = 0; i < singleDimension; i++) {
         double ci = coordinates[offset0 + i] - coordinates[offset1 +  i];
         r += ci*ci;
     }
