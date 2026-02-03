@@ -25,6 +25,8 @@ const double CUTCOEFF = 1e10;
 
 const int mc_samples = 100;
 
+const size_t singleDimension = 3;
+
 
 int num_electrons = 2;
 
@@ -37,7 +39,9 @@ int num_electrons = 2;
     // 4*border: for coordinate transform factor
     const double varc_factor = 2*4*border;
 
-    const double rhs_factor = 4*border*border;
+    /// @brief factor for scaling eigenvalue
+    /// @details from coordinate transform and Helmholtz factor
+    const double rhs_factor = 2*4*border*border;
 
     // modular for num_electrons
     const double eig_exp = -2.90338583;
@@ -153,8 +157,13 @@ int main(int argc, char **argv) {
 
 
 
-    mpi_cout(" Dimension " + to_string( DimensionSparseGrid));
+    mpi_cout("Grid dimension " + to_string(DimensionSparseGrid));
     mpi_cout("Regular grid.");
+    mpi_cout("");
+
+    mpi_cout("Single particle dimension " + to_string(singleDimension));
+
+    if (DimensionSparseGrid % singleDimension != 0)exit(1);
 
 
     #pragma omp parallel
