@@ -34,16 +34,17 @@ int num_electrons = 2;
     double bohr_radius = 5.29177210544e-11;
     double b_factor = sqrt(M_PI);
 
-    // TODO check varc factor
-    // 2: for factor 1/2 in atomic units
-    // 4*border: for coordinate transform factor
+
+    /// @brief Factor for variable coefficient
+    /// @details 2: for factor before Helmholtz operator in atomic units
+    /// 4*border: for coordinate transform factor
     const double varc_factor = 2*4*border;
 
     /// @brief factor for scaling eigenvalue
     /// @details from coordinate transform and Helmholtz factor
     const double rhs_factor = 2*4*border*border;
 
-    // modular for num_electrons
+    /// @brief expected eigenvalue for one core and two electrons in atomic units
     const double eig_exp = -2.90338583;
     const double transf_eig_exp = eig_exp*rhs_factor;
 
@@ -54,6 +55,9 @@ double alphasteps = 5;
 bool trick = true;
 
 
+/// @brief mpi appropriate output
+/// @param s output string
+/// @param endline whether to end with linebreak
 void mpi_cout(string s, bool endline = true){
     int rank = 0;
 #ifdef MY_MPI_ON
@@ -71,7 +75,10 @@ void mpi_cout(string s, bool endline = true){
 
 
 
-
+/// @brief variable coefficient term for electron of given index and a core
+/// @param coordinates coordinates for function evaluation
+/// @param electron_idx index of the electron in question
+/// @return value at coordinates
 double electron_core(double* coordinates, size_t electron_idx) {
     double r = 0;
     for (int i = DimensionSparseGrid*electron_idx; i < DimensionSparseGrid*(electron_idx+1); i++) {
@@ -91,6 +98,11 @@ double electron_core(double* coordinates, size_t electron_idx) {
 }
 
 
+/// @brief variable coefficient term for two electrons of given indices
+/// @param coordinates coordinates for function evaluation
+/// @param e_idx0 index of first electron
+/// @param e_idx1 index of second electron
+/// @return value at coordinates
 double electron_electron(double* coordinates, size_t e_idx0, size_t e_idx1) {
     double r = 0;
     int offset0 = DimensionSparseGrid*e_idx0;
@@ -112,7 +124,10 @@ double electron_electron(double* coordinates, size_t e_idx0, size_t e_idx1) {
 }
 
 
-double var_coeff( double* coordinates)
+/// @brief Calculates variable coefficient for two electrons and one core
+/// @param coordinates coordinates for function evaluation
+/// @return value at coordinates
+double var_coeff(double* coordinates)
 {
     double result = 0.;
 
