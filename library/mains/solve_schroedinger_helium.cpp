@@ -21,7 +21,7 @@ double border = 7.5;
 
 double eps = 1e-35;
 
-const double CUTCOEFF = 1e10;
+const double CUTCOEFF = 1e20;
 
 const int mc_samples = 100;
 
