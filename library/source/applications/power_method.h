@@ -218,7 +218,7 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
     // Iterate until maxiter
     for (int i = 0; i < maxIteration; i++) {
         // Remember iterations
-        k = i;
+        k = i+1;
 
         if (rightoperator) {
             // y := M * xalt
