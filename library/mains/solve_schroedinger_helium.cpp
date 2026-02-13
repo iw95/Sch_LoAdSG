@@ -53,6 +53,7 @@ double alpha = 1.;
 double alphasteps = 5;
 
 bool trick = true;
+	int startlevel = 1;
 
 
 /// @brief mpi appropriate output
@@ -227,7 +228,6 @@ int main(int argc, char **argv) {
 
 
 
-    int level_start=1;
 
     AdaptiveSparseGrid grid;
     IndexDimension centerPoint;
@@ -235,7 +235,7 @@ int main(int argc, char **argv) {
 
     double Linfty_old = 1.0;
 
-    for (int level = level_start; level <10; level++)
+    for (int level = startlevel; level <10; level++)
     {
         // Start measuring time
         struct timeval begin_all, end_all;
