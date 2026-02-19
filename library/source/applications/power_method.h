@@ -44,7 +44,20 @@ public:
 template<class Stencil>
 static double precon(VectorSparseG z, Stencil stencil);
 
-    
+
+
+    static void printLog(int dofs, vector<vector<string>> &logvector) {
+        ofstream filestream;
+        filestream.open("../results/powerlog.gnu_"+to_string(dofs)+".txt", std::ios::out);
+
+        for (int line = 0; line < logvector.size(); line++) {
+            for (int val = 0; val < logvector[line].size(); val++) {
+                filestream << logvector[line][val] << "\t";
+            }
+            filestream << endl;
+        }
+        filestream.close();
+    }  
 };
 
 
@@ -130,7 +143,7 @@ Power::power_max(double eps, VectorSparseG &x, double &eigenvalue, int &iteratio
     // Iterate until maxiter
     for (int i = 0; i < maxIteration; i++) {
         // Remember iterations
-        k = i;
+        k = i+1;
 
         // y := A * xalt
         matrix.multiplication<Stencil_left>(xalt, y, lhs);
@@ -179,6 +192,11 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
                  MatrixVectorHomogen& matrix, Stencil_left& lhs, Stencil_right& rhs, bool rightoperator, double &precondition, double &duration) {
 
 
+// LOG VECTOR with legend
+    vector<string> loglegend = {"Iteration", "lambda_i", "difflambda", "cgiter", "cgtime"};
+    vector<vector<string>> logvector;
+    logvector.push_back(loglegend);
+// LOG
 
     AdaptiveSparseGrid* grid = (x.getSparseGrid());
     ListOfDepthOrderedSubgrids list(*grid);
@@ -198,6 +216,8 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
     }
 
     // Start measuring time
+    struct timeval itertime_last, itertime_this;
+    gettimeofday(&itertime_last, 0);
     struct timeval begin, end;
     gettimeofday(&begin, 0);
 
@@ -218,7 +238,7 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
     // Iterate until maxiter
     for (int i = 0; i < maxIteration; i++) {
         // Remember iterations
-        k = i;
+        k = i+1;
 
         if (rightoperator) {
             // y := M * xalt
@@ -231,6 +251,18 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
 
 
         norm_x = sqrt(product(xneu, xneu));
+
+
+// LOGGING
+        // Iteration per time
+        gettimeofday(&itertime_this, 0);
+        double tdiff = itertime_this.tv_sec - itertime_last.tv_sec;
+        tdiff += (itertime_this.tv_usec - itertime_last.tv_usec) * 1e-6;
+        itertime_last = itertime_this;
+
+        logvector.push_back({to_string(i), to_string(norm_x), to_string(abs(norm_x - norm_x_old)), to_string(cg_iterations), to_string(cg_time)});
+// LOG
+
 
         if (abs(norm_x - norm_x_old) < eps)
             break;
@@ -256,6 +288,8 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
     iterations = k;
     avg_cg_iterations = avg_cg_iter;
     x = xneu/norm_x;
+
+    printLog(grid->getLevel(), logvector);
 
     return true;
 }

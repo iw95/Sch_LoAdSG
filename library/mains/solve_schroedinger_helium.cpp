@@ -21,7 +21,8 @@ double border = 7.5;
 
 double eps = 1e-35;
 
-const double CUTCOEFF = 1e10;
+const double CUTCOEFF = 1e5;
+//1e20
 
 const int mc_samples = 100;
 
@@ -47,6 +48,7 @@ int num_electrons = 2;
     /// @brief expected eigenvalue for one core and two electrons in atomic units
     const double eig_exp = -2.90338583;
     const double transf_eig_exp = eig_exp*rhs_factor;
+    const double shiftvalue = 100*transf_eig_exp;
 
 
 double alpha = 1.;
@@ -147,7 +149,8 @@ double var_coeff(double* coordinates)
 
     // Trick to make positive definite
     if (trick) {
-        result -= 1.9 * transf_eig_exp;
+        //result -= 1.9 * transf_eig_exp;
+        result += shiftvalue;
     }
 
     return result * alpha;
@@ -209,7 +212,7 @@ int main(int argc, char **argv) {
         cout << "The expected eigenvalue is " << eig_exp << endl;
         cout << "Computing for " << num_electrons << " electrons." << endl << endl;
         cout << "Computing on domain [-" << border << ", " << border << "]" << endl;
-        cout << (trick ? "U" : "NOT u") << "sing the shift trick for positive eigenvalue." << endl;
+        cout << (trick ? "U" : "NOT u") << "sing the shift trick for positive eigenvalue with shift " << shiftvalue << "." << endl;
         cout << "With epsilon = " << eps << endl;
         cout << "And Coefficient cutoff = " << CUTCOEFF << endl;
         cout << "Monte Carlo samples = " << mc_samples << endl << endl;
@@ -280,7 +283,8 @@ int main(int argc, char **argv) {
                 m, lhs, rhs, true, precon, time_power);
 
 
-            powers_str += "\t" + to_string(eigenvalue_power/(rhs_factor*0.9));
+            //powers_str += "\t" + to_string(eigenvalue_power/(rhs_factor*0.9));
+            powers_str += "\t" + to_string((eigenvalue_power / rhs_factor) - shiftvalue);
 
             if (alpha_local == alphasteps) {
                 powers_str += "\t\t" + to_string(cg_interations);

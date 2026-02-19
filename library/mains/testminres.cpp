@@ -6,6 +6,8 @@
 
 
 int main(int argc, char **argv) {
+    cout << "Calculating on " << DimensionSparseGrid << "D" << endl;
+
     srand(time({})); // use current time as seed for random generator
 
     cout << "Level\tErrorP\tIterationsP\t\tErrorH\tIterationsH" << endl;
@@ -17,6 +19,7 @@ int main(int argc, char **argv) {
     IndexDimension centerPoint;
 
     double Linfty_old = 1.0;
+    double epsilon = 1e-10;
 
 
     for (int level = level_start; level <9; level++)
@@ -66,11 +69,11 @@ int main(int argc, char **argv) {
         int minres_iterH;
         double precontime;
 
-        MinRes::solveHomogen<Poisson>(1e-10, x0, b, &minres_iterations, xminres, m, poisson, &precontime);
+        MinRes::solveHomogenRESTART<Poisson>(epsilon, x0, b, &minres_iterations, xminres, m, poisson, &precontime);
         xdiff = x - xminres;
         double error = product(xdiff, xdiff);
 
-        MinRes::solveHomogen<HelmHoltz>(1e-10, x0, bH, &minres_iterH, xminres, m, helmholtz, &precontime);
+        MinRes::solveHomogenRESTART<HelmHoltz>(epsilon, x0, bH, &minres_iterH, xminres, m, helmholtz, &precontime);
         xdiff = x - xminres;
         double errorH = product(xdiff, xdiff);
 
