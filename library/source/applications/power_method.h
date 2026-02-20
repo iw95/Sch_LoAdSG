@@ -48,7 +48,7 @@ static double precon(VectorSparseG z, Stencil stencil);
 
     static void printLog(int dofs, vector<vector<string>> &logvector) {
         ofstream filestream;
-        filestream.open("../results/powerlog.gnu_"+to_string(dofs)+".txt", std::ios::out);
+        filestream.open("../results/powerlog_"+to_string(dofs)+".txt", std::ios::out);
 
         for (int line = 0; line < logvector.size(); line++) {
             for (int val = 0; val < logvector[line].size(); val++) {

@@ -48,7 +48,8 @@ int num_electrons = 2;
     /// @brief expected eigenvalue for one core and two electrons in atomic units
     const double eig_exp = -2.90338583;
     const double transf_eig_exp = eig_exp*rhs_factor;
-    const double shiftvalue = 100*transf_eig_exp;
+    const double shiftfactor = 10;
+    const double shiftvalue = (shiftfactor+1) * (-1) * transf_eig_exp;
 
 
 double alpha = 1.;
@@ -284,7 +285,8 @@ int main(int argc, char **argv) {
 
 
             //powers_str += "\t" + to_string(eigenvalue_power/(rhs_factor*0.9));
-            powers_str += "\t" + to_string((eigenvalue_power / rhs_factor) - shiftvalue);
+            //powers_str += "\t" + to_string((eigenvalue_power / rhs_factor) - shiftvalue);
+            powers_str += "\t" + to_string(eigenvalue_power / (rhs_factor * shiftfactor));
 
             if (alpha_local == alphasteps) {
                 powers_str += "\t\t" + to_string(cg_interations);
