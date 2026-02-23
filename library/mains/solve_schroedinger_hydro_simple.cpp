@@ -19,7 +19,7 @@ double border = 7.5;
 
 double eps = 1e-35;
 
-const double CUTCOEFF = 1e10;
+const double CUTCOEFF = 1e5;
 
 const int mc_samples = 100;
 
@@ -28,14 +28,17 @@ const int mc_samples = 100;
     double b_factor = sqrt(M_PI);
 
 
-    const double varc_factor = -8*border;
+    const double varc_factor = -16*border;
 
-    const double rhs_factor = 4*border*border;
+    const double rhs_factor = 8*border*border;
 
-    const double eig_exp = -1.*rhs_factor;
+    const double eig_exp = -1.;//*rhs_factor;
+    const double shiftfactor = 0.9;
+    const double shiftvalue = (shiftfactor+1) * (-1) * eig_exp*rhs_factor;
 
 
 double alpha = 1.;
+double alphasteps = 5;
 
 
 volatile double r_min = 1;
@@ -89,7 +92,8 @@ double var_coeff( double* coordinates)
     }
 
     result = varc_factor * result;
-    result -= 1.9*eig_exp; // + 1.9*1*4*s^2 (eig_exp==1)
+    //result -= 1.9*eig_exp; // + 1.9*1*4*s^2 (eig_exp==1)
+    result += shiftvalue;
 
 
     double over_r = 1./r;
@@ -122,7 +126,7 @@ double known_eigenfunction(IndexDimension I) {
     }
     r = sqrt(r);
 
-    double val = exp(- 1. * r) / b_factor;
+    double val = 2* exp(- 1. * r);// / b_factor;
 
 
     return val;
@@ -157,7 +161,7 @@ int main(int argc, char **argv) {
 
 
     mpi_cout(" Dimension " + to_string( DimensionSparseGrid));
-    mpi_cout("regular grid, solve: -lap u + (c-1.9lambda)*u =  -0.9lamda");
+    mpi_cout("regular grid, solve: -lap u + (c-" + to_string(1+shiftfactor) + "lambda)*u =  -" + to_string(1/shiftfactor) + "lamda");
 
 
     #pragma omp parallel
@@ -183,21 +187,22 @@ int main(int argc, char **argv) {
 
     if (rank == 0) {
         cout << "Computing the first eigenvalue of the Schroedinger equation for the Spinless Hydrogen atom." << endl;
-        cout << "The expected eigenvalue is " << -13.6 << endl << endl;
+        cout << "The expected eigenvalue is " << eig_exp << endl << endl;
         cout << "Dimension " << DimensionSparseGrid << endl;
         cout << "Computing on domain [-" << border << ", " << border << "]" << endl;
         cout << "With epsilon = " << eps << endl;
         cout << "And Coefficient cutoff = " << CUTCOEFF << endl;
+        cout << "Shift factor = " << shiftfactor << endl;
         cout << "Monte Carlo samples = " << mc_samples << endl << endl;
         //mpi_cout("level\tDOFS\tSummed\t\tPoisson\t\tVarC\t\t\tDiffADD");
 
         cout << "Factor k^2 = " << varc_factor << endl << endl;
 
         string legend = "level\tDOFS\t\t\tHelmholz\talph=";
-        for (double alpha_local = 0.; alpha_local <= 1; alpha_local += 0.1) {
+        for (double alpha_local = 0; alpha_local <= 1; alpha_local += 1/alphasteps) {
             legend += "\t" + to_string(alpha_local);
         }
-        legend += "\t\tcg_iter";
+        legend += "\t\tpow_iter\tcg_iter";
         cout << legend << endl << endl;
         //cout <<"level\tDOFS\tByMult\t\tPower" << endl;
     }
@@ -287,7 +292,6 @@ int main(int argc, char **argv) {
         Poisson poisson(grid);
             
 
-        double alphasteps = 10;
         for (int alpha_local = 0; alpha_local <= alphasteps; alpha_local += 1) {
 
             alpha = alpha_local / alphasteps;
@@ -319,10 +323,10 @@ int main(int argc, char **argv) {
 
 
             mults_str += "\t" + to_string(eigenvalue_mult/rhs_factor);
-            powers_str += "\t" + to_string(eigenvalue_power/rhs_factor);
+            powers_str += "\t" + to_string(eigenvalue_power/(rhs_factor*shiftfactor));
 
             if (alpha_local == alphasteps) {
-                powers_str += "\t\t" + to_string(cg_interations);
+                powers_str += "\t\t" + to_string(pow_interations) + "\t" + to_string(cg_interations);
             }
         
         }
