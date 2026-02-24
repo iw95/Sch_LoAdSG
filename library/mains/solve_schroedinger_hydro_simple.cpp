@@ -32,7 +32,7 @@ const int mc_samples = 100;
 
     const double rhs_factor = 8*border*border;
 
-    const double eig_exp = -1.;//*rhs_factor;
+    const double eig_exp = -0.5;//*rhs_factor;
     const double shiftfactor = 0.9;
     const double shiftvalue = (shiftfactor+1) * (-1) * eig_exp*rhs_factor;
 
@@ -65,7 +65,22 @@ void mpi_cout(string s, bool endline = true){
 
 
 string r_minmax_res_log() {
-    string str = to_string(r_min) + "\t" + to_string(r_max);
+    string str = "";
+    
+    int rank = 0;
+    #ifdef MY_MPI_ON
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        double globr_min;
+        double globr_max;
+
+        MPI_Reduce((const double *)&r_min, &globr_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce((const double *)&r_max, &globr_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+        if (rank==0) {
+            str = to_string(globr_min) + "\t" + to_string(globr_max);
+        }
+    #endif
+
     r_min = 1;
     r_max = 1;
     return str;
@@ -96,13 +111,10 @@ double var_coeff( double* coordinates)
     result += shiftvalue;
 
 
-    double over_r = 1./r;
-    if (over_r < r_min) {
-        r_min = over_r;
-    }
-    if (over_r > r_max) r_max = over_r;
-
-    //cout << over_r << "\t";
+    // log range of sampled values
+    double over_r = (r!=0) ? 1./r : 1;
+    if (alpha==1 && over_r < r_min) r_min = over_r;
+    if (alpha==1 && over_r > r_max) r_max = over_r;
 
 
 
@@ -228,7 +240,7 @@ int main(int argc, char **argv) {
 
     double Linfty_old = 1.0;
 
-    for (int level = level_start; level <9; level++)
+    for (int level = level_start; level <15; level++)
     {
         // Start measuring time
         struct timeval begin_all, end_all;
@@ -347,16 +359,18 @@ int main(int argc, char **argv) {
         mpi_cout("");
 
 
-        minmax_str = to_string(level) + "\t\t" + r_minmax_res_log() + "\n";
-        minmaxstream << minmax_str;
+        // Log minimum and maximum sampled singularity values (reduce across mpi processes and print on rank 0)
+        minmax_str = to_string(level) + "\t\t" + r_minmax_res_log();
+        #ifdef MY_MPI_ON
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        if (rank == 0) minmaxstream << minmax_str << endl;
+        #endif
 
 
     }
     minmaxstream.close();
 
-    #ifdef MY_MPI_ON
-        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    #endif
+    
 
 #ifdef MY_MPI_ON
     MPI_Finalize();
