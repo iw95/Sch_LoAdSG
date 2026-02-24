@@ -207,6 +207,9 @@ int main(int argc, char **argv) {
         //cout <<"level\tDOFS\tByMult\t\tPower" << endl;
     }
 
+    ofstream minmaxstream;
+    minmaxstream.open("../results/minmaxsing.txt", std::ios::out);
+
 
 
 
@@ -220,6 +223,7 @@ int main(int argc, char **argv) {
 
 
     string minmax_str = "level\t\tmin\tmax\n";
+    minmaxstream << minmax_str;
 
 
     double Linfty_old = 1.0;
@@ -343,15 +347,15 @@ int main(int argc, char **argv) {
         mpi_cout("");
 
 
-        minmax_str += to_string(level) + "\t\t" + r_minmax_res_log() + "\n";
+        minmax_str = to_string(level) + "\t\t" + r_minmax_res_log() + "\n";
+        minmaxstream << minmax_str;
 
 
     }
+    minmaxstream.close();
 
     #ifdef MY_MPI_ON
         MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if (rank==1)
-            cout << minmax_str;
     #endif
 
 #ifdef MY_MPI_ON
