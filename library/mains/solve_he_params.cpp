@@ -50,6 +50,40 @@ void set_shiftvalue(double newfactor) {
 }
 
 
+
+
+
+const int num_bins = 100;
+vector<double> create_binborders() {
+    vector<double> binborders(num_bins+1);
+    binborders[num_bins] = INFINITY;
+    for (size_t i = 0; i < num_bins; i++)
+    {
+        binborders[i] = 1. - (log((i+1)/num_bins) / log(1./num_bins));
+    }
+
+    return binborders;
+}
+
+
+
+// logging sample values
+double r_max = 1;
+double r_min = 1;
+vector<double> binborders_norm = create_binborders();
+vector<double> binborders(binborders_norm.size());
+vector<int> bincontents(binborders.size() - 1);
+
+void set_binborders(double newcutoff) {
+    for (size_t i = 0; i < binborders.size(); i++)
+    {
+        binborders[i] = newcutoff * binborders_norm[i];
+    }
+}
+
+
+
+
 /// @brief mpi appropriate output
 /// @param s output string
 /// @param endline whether to end with linebreak
@@ -71,6 +105,86 @@ void mpi_cout(string s, bool endline = true){
 
 
 
+/// @brief gather logged minimum and maximum mc sampled values from all mpi threads and write output string
+/// @return logging string
+string minmax_sample_combine_log() {
+    string str = "";
+    
+    int rank = 0;
+    #ifdef MY_MPI_ON
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        double globr_min;
+        double globr_max;
+
+        MPI_Reduce((const double *)&r_min, &globr_min, 1, MPI_DOUBLE, MPI_MIN, 0, MPI_COMM_WORLD);
+        MPI_Reduce((const double *)&r_max, &globr_max, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
+
+        if (rank==0) {
+            str = to_string(globr_min) + "\t" + to_string(globr_max);            
+        }
+    #endif
+
+    // Reset all logging values
+    r_min = 1;
+    r_max = 1;
+    return str;
+}
+
+
+/// @brief gather logged mc sampled histogram values from all mpi threads and write output string
+/// @return logging string
+string hist_sample_combine_log() {
+    string row1 = "";
+    string row2 = "";
+    
+    int rank = 0;
+    #ifdef MY_MPI_ON
+        MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+        int sum[num_bins];
+        MPI_Reduce((const int *)&sum, &bincontents[0], bincontents.size(), MPI_INT, MPI_SUM, 0, MPI_COMM_WORLD);
+
+        if (rank==0) {
+            for (size_t i = 0; i < num_bins; i++) {
+                row1 += to_string(binborders[i]) + ";";
+                row2 += to_string(bincontents[i]) + ";";
+            }
+            row1 += "\n";
+            row2 += "\n\n";
+        }
+    #endif
+
+    // Reset bin contents
+    fill(bincontents.begin(), bincontents.end(), 0);
+    return row1 + row2;
+}
+
+
+
+void inline r_count(double over_r) {
+    if (over_r < r_min) r_min = over_r;
+    if (!isinf(over_r) && over_r > r_max) r_max = over_r;
+
+    // binary search to find right bin
+    int leftidx = 0;
+    int rightidx = binborders.size()-1;
+    while(!(binborders[leftidx] <= over_r && binborders[leftidx+1] > over_r)) {
+        int middleidx = int((rightidx - leftidx) / 2);
+        if (binborders[middleidx] <= over_r) {
+            leftidx = middleidx;
+        } else {
+            rightidx = middleidx;
+        }
+    }
+
+    // count up respective bin
+    bincontents[leftidx] += 1;
+}
+
+
+
+
+
+
 
 /// @brief variable coefficient term for electron of given index and a core
 /// @param coordinates coordinates for function evaluation
@@ -88,6 +202,8 @@ double electron_core(double* coordinates, size_t electron_idx) {
     if (r!=0) {
         result = min(1./r, CUTCOEFF);
     }
+    // log sampled values
+    r_count(1/r);
 
     return -2 * result;
     // Still to happen in : varc_factor for coordinate transformation
@@ -114,6 +230,8 @@ double electron_electron(double* coordinates, size_t e_idx0, size_t e_idx1) {
     if (r != 0) {
         result = min(1./r, CUTCOEFF);
     }
+    // log sampled values
+    r_count(1/r);
 
     return 0.5*result;
     // Still to happen: varc_factor for coordinate transformation
@@ -154,6 +272,9 @@ int main(int argc, char **argv) {
     // writing output to a file
     freopen ("output.txt","w",stdout);
     freopen ("stderr.txt","w",stderr);
+    // further file streams
+    ofstream minmaxstream; string minmax_str;
+    ofstream histstream; string hist_str;
 
     int rank = 0;
     int num_tasks = 1;
@@ -216,8 +337,19 @@ int main(int argc, char **argv) {
 
         cout << endl << endl;
 
-        string legend = "level\tDOFS\t\tshift\tclip\tmcsampl\t\teig\t\teig_diff\t\tcg_iter\t\tpow_iter\ttime";
+        string legend = "level\tDOFS\t\tmcsampl\tclip\tshift\t\teig\t\teig_diff\t\tcg_iter\t\tpow_iter\ttime";
         cout << legend << endl << endl;
+
+
+        // sampling logs
+        minmaxstream.open("../results/minmaxsing.txt", std::ios::out);
+        histstream.open("../results/histsing.txt", ios::out);
+
+        minmax_str = "level\tmcsampl\tclip\tshift\t\tmin\tmax\n";
+        minmaxstream << minmax_str;
+
+        hist_str = "level\tmcsampl\tclip\tshift -> binborders, count\n";
+        histstream << hist_str;
     }
 
 
@@ -226,25 +358,26 @@ int main(int argc, char **argv) {
     // Regular grid construction
     AdaptiveSparseGrid grid;
     IndexDimension centerPoint;
-    IndexDimension centerPoint;
     grid.AddRecursiveSonsOfPoint(centerPoint,lvl);
 
     MultiLevelAdaptiveSparseGrid mgrid(&grid);
     MatrixVectorHomogen m(grid, mgrid, 1, 0);
 
 
-    for (double sflocal : shiftfactorarray)
+
+    for (int mcslocal : mcsamplesarray)
     {
-        shiftfactor = sflocal;
-        set_shiftvalue(shiftfactor);
+        mc_sample = mcslocal;
 
-        for (int mcslocal : mcsamplesarray)
+        for (double cliplocal : CUTCOEFFarray)
         {
-            mc_sample = mcslocal;
+            CUTCOEFF = cliplocal;
+            set_binborders(CUTCOEFF);
 
-            for (double cliplocal : CUTCOEFFarray)
+            for (double sflocal : shiftfactorarray)
             {
-                CUTCOEFF = cliplocal;
+                shiftfactor = sflocal;
+                set_shiftvalue(shiftfactor);
 
 
                 // Matrix construction
@@ -272,6 +405,7 @@ int main(int argc, char **argv) {
                 eigenvalue_power /= (rhs_factor * shiftfactor);
 
 
+
                 // LOGGING results
                 string legend = "level\tDOFS\t\tshift\tclip\tmcsampl\t\teig\t\teig_diff\t\tcg_iter\t\tpow_iter\ttime";
                 string logstr = to_string(lvl) + "\t" + to_string(grid.getDOFS()) + "\t\t";
@@ -279,6 +413,20 @@ int main(int argc, char **argv) {
                 logstr += to_string(eigenvalue_power) +"\t\t" + to_string(eigenvalue_power-eig_exp) + "\t\t";
                 logstr += to_string(cg_interations) + "\t\t" + to_string(pow_interations) + "\t" + to_string(time_power);
                 mpi_cout(logstr);
+
+                // Log minimum and maximum sampled singularity values (reduce across mpi processes and print on rank 0)
+                minmax_str = "\t\t" + minmax_sample_combine_log();
+                hist_str = hist_sample_combine_log();
+
+                #ifdef MY_MPI_ON
+                MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+                string rowid = to_string(lvl) + "\t" + to_string(mc_sample) + "\t" + to_string(CUTCOEFF) + "\t" + to_string(shiftfactor);
+                if (rank == 0) {
+                    minmaxstream << rowid << minmax_str << flush;
+                    histstream << rowid << hist_str << flush;
+
+                }
+                #endif
             }
         }
     }
