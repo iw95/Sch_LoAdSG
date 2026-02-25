@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
         }
 
 
-    int numberMVprocesses=1;
+    int numberMVprocesses=min(1, int(num_tasks* 2/5));
     int numberLSprocesses=num_tasks - numberMVprocesses;
 
     mpi_cout("use " + to_string(numberLSprocesses)+ " for LocalStiffnessmatrices ");
