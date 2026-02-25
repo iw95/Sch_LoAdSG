@@ -210,10 +210,6 @@ Power::power_inverse(double eps, VectorSparseG &x, double &eigenvalue, int &iter
 
     // solves  Ax = M * (lambda * x); for smallest lambda and x
 
-    // Preconditioning
-    if (precondition != 0) {
-        precondition = Power::precon<Stencil_left>(z, lhs);
-    }
 
     // Start measuring time
     struct timeval itertime_last, itertime_this;
