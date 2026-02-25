@@ -54,10 +54,12 @@ void mpi_cout(string s, bool endline = true){
     if(rank ==0){
         cout << s;
         if (endline) cout << endl;
+        cout << flush;
     }
 #else
         cout << s;
         if (endline) cout << endl;
+        cout << flush;
 #endif
 }
 
