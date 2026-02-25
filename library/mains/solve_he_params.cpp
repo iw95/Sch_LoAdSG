@@ -52,7 +52,7 @@ void set_shiftvalue(double newfactor) {
 
 
 
-
+/*
 const int num_bins = 100;
 vector<double> create_binborders() {
     vector<double> binborders(num_bins+1);
@@ -64,12 +64,13 @@ vector<double> create_binborders() {
 
     return binborders;
 }
-
+*/
 
 
 // logging sample values
 double r_max = 1;
 double r_min = 1;
+/*
 vector<double> binborders_norm = create_binborders();
 vector<double> binborders(binborders_norm.size());
 vector<int> bincontents(binborders.size() - 1);
@@ -80,7 +81,7 @@ void set_binborders(double newcutoff) {
         binborders[i] = newcutoff * binborders_norm[i];
     }
 }
-
+*/
 
 
 
@@ -131,6 +132,7 @@ string minmax_sample_combine_log() {
 }
 
 
+/*
 /// @brief gather logged mc sampled histogram values from all mpi threads and write output string
 /// @return logging string
 string hist_sample_combine_log() {
@@ -157,6 +159,7 @@ string hist_sample_combine_log() {
     fill(bincontents.begin(), bincontents.end(), 0);
     return row1 + row2;
 }
+*/
 
 
 
@@ -164,6 +167,7 @@ void inline r_count(double over_r) {
     if (over_r < r_min) r_min = over_r;
     if (!isinf(over_r) && over_r > r_max) r_max = over_r;
 
+    /*
     // binary search to find right bin
     int leftidx = 0;
     int rightidx = binborders.size()-1;
@@ -178,6 +182,7 @@ void inline r_count(double over_r) {
 
     // count up respective bin
     bincontents[leftidx] += 1;
+    */
 }
 
 
@@ -343,13 +348,13 @@ int main(int argc, char **argv) {
 
         // sampling logs
         minmaxstream.open("../results/minmaxsing.txt", std::ios::out);
-        histstream.open("../results/histsing.txt", ios::out);
+        //histstream.open("../results/histsing.txt", ios::out);
 
         minmax_str = "level\tmcsampl\tclip\tshift\t\tmin\tmax\n";
         minmaxstream << minmax_str;
 
-        hist_str = "level\tmcsampl\tclip\tshift -> binborders, count\n";
-        histstream << hist_str;
+        //hist_str = "level\tmcsampl\tclip\tshift -> binborders, count\n";
+        //histstream << hist_str;
     }
 
 
@@ -372,7 +377,7 @@ int main(int argc, char **argv) {
         for (double cliplocal : CUTCOEFFarray)
         {
             CUTCOEFF = cliplocal;
-            set_binborders(CUTCOEFF);
+            //set_binborders(CUTCOEFF);
 
             for (double sflocal : shiftfactorarray)
             {
@@ -407,7 +412,7 @@ int main(int argc, char **argv) {
 
 
                 // LOGGING results
-                string legend = "level\tDOFS\t\tshift\tclip\tmcsampl\t\teig\t\teig_diff\t\tcg_iter\t\tpow_iter\ttime";
+                //string legend = "level\tDOFS\t\tshift\tclip\tmcsampl\t\teig\t\teig_diff\t\tcg_iter\t\tpow_iter\ttime";
                 string logstr = to_string(lvl) + "\t" + to_string(grid.getDOFS()) + "\t\t";
                 logstr += to_string(shiftfactor) + "\t" + to_string(CUTCOEFF) + "\t" + to_string(mc_sample) + "\t\t";
                 logstr += to_string(eigenvalue_power) +"\t\t" + to_string(eigenvalue_power-eig_exp) + "\t\t";
@@ -416,14 +421,14 @@ int main(int argc, char **argv) {
 
                 // Log minimum and maximum sampled singularity values (reduce across mpi processes and print on rank 0)
                 minmax_str = "\t\t" + minmax_sample_combine_log();
-                hist_str = hist_sample_combine_log();
+                //hist_str = hist_sample_combine_log();
 
                 #ifdef MY_MPI_ON
                 MPI_Comm_rank(MPI_COMM_WORLD, &rank);
                 string rowid = to_string(lvl) + "\t" + to_string(mc_sample) + "\t" + to_string(CUTCOEFF) + "\t" + to_string(shiftfactor);
                 if (rank == 0) {
                     minmaxstream << rowid << minmax_str << flush;
-                    histstream << rowid << hist_str << flush;
+                    //histstream << rowid << hist_str << flush;
 
                 }
                 #endif
